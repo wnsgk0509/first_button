@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="하루 한 질문으로 습관적인 핸드폰 사용을 돌아보는 디지털 디톡스 서비스. 잠깐 멈추고 자신을 생각해보세요." />
+  <title>잠깐 — 하루 한 질문</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#fdfaf5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="잠깐" />
+  <link rel="apple-touch-icon" href="./icon-512.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500&family=Noto+Sans+KR:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- GATE SCREEN (무의식 행동 인터셉트) -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="gate-screen" id="gate-screen">
+    <div class="gate-inner">
+      <div class="gate-ring" id="gate-ring">
+        <svg class="gate-progress" viewBox="0 0 100 100">
+          <circle class="gate-track" cx="50" cy="50" r="44" />
+          <circle class="gate-fill" id="gate-fill" cx="50" cy="50" r="44" />
+        </svg>
+        <span class="gate-logo">잠깐</span>
+      </div>
+      <p class="gate-msg" id="gate-msg">핸드폰을 집어 들었군요</p>
+      <p class="gate-sub">잠깐만 멈춰볼게요</p>
+    </div>
+  </div>
+
+  <!-- Install Banner -->
+  <div class="install-banner" id="install-banner">
+    <div class="install-content">
+      <span class="install-icon">🌿</span>
+      <div class="install-text">
+        <span class="install-title">홈 화면에 추가하기</span>
+        <span class="install-desc">앱처럼 설치하면 더 효과적이에요</span>
+      </div>
+    </div>
+    <div class="install-btns">
+      <button class="install-btn-yes" id="install-btn-yes" onclick="installPWA()">설치</button>
+      <button class="install-btn-no" id="install-btn-no" onclick="dismissInstall()">나중에</button>
+    </div>
+  </div>
+
+  <!-- Ambient Background -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <!-- Navigation -->
+  <nav class="nav" id="nav">
+    <div class="nav-logo">잠깐</div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-today" onclick="showView('today')">오늘의 질문</button>
+      <button class="nav-tab" id="tab-journal" onclick="showView('journal')">나의 기록</button>
+      <button class="nav-tab" id="tab-about" onclick="showView('about')">소개</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- VIEW: TODAY -->
+  <!-- ═══════════════════════════════════════ -->
+  <main class="view active" id="view-today">
+
+    <!-- Breath Prompt -->
+    <section class="breath-section">
+      <div class="breath-ring" id="breath-ring">
+        <span class="breath-text" id="breath-label">잠깐</span>
+      </div>
+      <p class="breath-hint">원을 누르면 호흡 가이드가 시작돼요</p>
+    </section>
+
+    <!-- Date -->
+    <p class="date-label" id="date-label">오늘의 날짜</p>
+
+    <!-- Question Card -->
+    <section class="question-section">
+      <div class="question-card" id="question-card">
+        <div class="q-mark">"</div>
+        <p class="question-text" id="question-text">오늘 아침, 가장 먼저 떠오른 생각은 무엇인가요?</p>
+        <div class="q-mark q-mark-close">"</div>
+      </div>
+    </section>
+
+    <!-- Journal Entry -->
+    <section class="journal-entry-section" id="journal-section">
+      <div class="journal-box">
+        <label class="journal-label" for="journal-input">✦ 지금 이 질문에 대해 솔직하게 써보세요</label>
+        <textarea
+          id="journal-input"
+          class="journal-textarea"
+          placeholder="생각나는 것을 자유롭게 적어보세요. 잘 쓸 필요 없어요."
+          rows="5"
+        ></textarea>
+        <div class="journal-actions">
+          <span class="char-count" id="char-count">0자</span>
+          <button class="save-btn" id="save-btn" onclick="saveEntry()">저장하기</button>
+        </div>
+      </div>
+      <p class="save-msg" id="save-msg"></p>
+    </section>
+
+    <!-- Streak -->
+    <section class="streak-section">
+      <div class="streak-badge" id="streak-badge">
+        <span class="streak-icon">🌿</span>
+        <span class="streak-count" id="streak-count">0</span>
+        <span class="streak-label-text">일 연속</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- VIEW: JOURNAL -->
+  <!-- ═══════════════════════════════════════ -->
+  <main class="view" id="view-journal">
+    <div class="journal-header">
+      <h1 class="journal-title">나의 기록</h1>
+      <p class="journal-subtitle">쌓인 생각들을 돌아보세요</p>
+    </div>
+    <div class="entries-list" id="entries-list">
+      <p class="empty-msg">아직 기록이 없어요.<br/>오늘의 질문에 답하고 저장해 보세요. 🌿</p>
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- VIEW: ABOUT -->
+  <!-- ═══════════════════════════════════════ -->
+  <main class="view" id="view-about">
+    <div class="about-content">
+      <div class="about-icon">☽</div>
+      <h1 class="about-title">잠깐</h1>
+      <p class="about-subtitle">haru han jil-mun</p>
+      <div class="about-divider"></div>
+      <div class="about-body">
+        <p>습관처럼 핸드폰을 집어 들었나요?</p>
+        <p>괜찮아요. 의지력의 문제가 아니에요.</p>
+        <p>우리의 뇌는 지루함을 피하려 자동으로<br/>자극을 찾아 나섭니다.</p>
+        <br/>
+        <p><strong>잠깐</strong>은 그 순간을 붙잡아<br/>자신에게 하나의 질문을 던집니다.</p>
+        <br/>
+        <p>도파민 대신 — 생각.</p>
+        <p>스크롤 대신 — 성찰.</p>
+      </div>
+      <div class="about-divider"></div>
+      <div class="about-stats" id="about-stats">
+        <div class="stat-item">
+          <span class="stat-num" id="stat-total">0</span>
+          <span class="stat-label">총 기록</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="stat-streak">0</span>
+          <span class="stat-label">연속 일수</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="stat-words">0</span>
+          <span class="stat-label">총 단어</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    // Service Worker 등록
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.log('SW error:', err));
+      });
+    }
+  </script>
+</body>
+</html>
