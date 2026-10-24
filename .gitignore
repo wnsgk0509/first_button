@@ -1,0 +1,9 @@
+*.apk
+first_button_app/node_modules/
+first_button_app/android/app/build/
+first_button_app/android/.gradle/
+first_button_app/android/build/
+first_button_app/android/app/.cxx/
+first_button_app/android/local.properties
+.DS_Store
+Thumbs.db
