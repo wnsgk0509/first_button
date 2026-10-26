@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GATE_MESSAGES } from '../constants/questions';
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export const GateScreen: React.FC<Props> = ({ onDismiss }) => {
+  const insets = useSafeAreaInsets();
   const [msg] = useState(
     () => GATE_MESSAGES[Math.floor(Math.random() * GATE_MESSAGES.length)]
   );
@@ -66,7 +68,15 @@ export const GateScreen: React.FC<Props> = ({ onDismiss }) => {
   });
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+    <Animated.View
+      style={[
+        styles.overlay,
+        {
+          opacity: fadeAnim,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        },
+      ]}>
       <TouchableOpacity
         activeOpacity={1}
         onPress={handlePress}

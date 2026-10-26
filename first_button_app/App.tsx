@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import {
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { GateScreen } from './src/components/GateScreen';
 import { JournalScreen } from './src/screens/JournalScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -14,7 +17,8 @@ import { TodayScreen } from './src/screens/TodayScreen';
 
 type TabKey = 'today' | 'journal' | 'settings';
 
-function App(): React.JSX.Element {
+function MainApp(): React.JSX.Element {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabKey>('today');
   const [showGate, setShowGate] = useState(true);
   const [journalRefreshKey, setJournalRefreshKey] = useState(0);
@@ -24,7 +28,7 @@ function App(): React.JSX.Element {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.mainContainer, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
 
       {/* Main Top Header */}
@@ -48,7 +52,13 @@ function App(): React.JSX.Element {
       </View>
 
       {/* Bottom Navigation Bar */}
-      <View style={styles.navBar}>
+      <View
+        style={[
+          styles.navBar,
+          {
+            paddingBottom: Math.max(insets.bottom, 12),
+          },
+        ]}>
         <TouchableOpacity
           activeOpacity={0.8}
           style={[styles.navTab, activeTab === 'today' && styles.activeNavTab]}
@@ -97,21 +107,30 @@ function App(): React.JSX.Element {
 
       {/* Gate screen interceptor */}
       {showGate && <GateScreen onDismiss={() => setShowGate(false)} />}
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function App(): React.JSX.Element {
+  return (
+    <SafeAreaProvider>
+      <MainApp />
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  mainContainer: {
     flex: 1,
     backgroundColor: '#FAF8F4',
   },
   topHeader: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 14,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ECE7DD',
+    backgroundColor: '#FAF8F4',
   },
   headerTitle: {
     fontSize: 22,
@@ -132,14 +151,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#ECE7DD',
-    paddingVertical: 10,
+    paddingTop: 10,
     paddingHorizontal: 16,
     justifyContent: 'space-around',
     shadowColor: '#2D2A26',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 8,
   },
   navTab: {
     flex: 1,
