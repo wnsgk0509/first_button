@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -35,9 +36,33 @@ export const TodayScreen: React.FC<Props> = ({ onJournalUpdated }) => {
   const [streak, setStreak] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<any>(null);
 
   useEffect(() => {
     initToday();
+
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates?.height || 280);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 120);
+      }
+    );
+
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const initToday = async () => {
@@ -104,8 +129,13 @@ export const TodayScreen: React.FC<Props> = ({ onJournalUpdated }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.keyboardAvoid}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled">
+        ref={scrollViewRef}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 40 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         {/* Header Bar */}
         <View style={styles.headerRow}>
           <Text style={styles.dateText}>{dateLabel}</Text>
@@ -132,6 +162,11 @@ export const TodayScreen: React.FC<Props> = ({ onJournalUpdated }) => {
             placeholderTextColor="#ABA59C"
             value={inputText}
             onChangeText={setInputText}
+            onFocus={() => {
+              setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+              }, 150);
+            }}
             textAlignVertical="top"
           />
 
