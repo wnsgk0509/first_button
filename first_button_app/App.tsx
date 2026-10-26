@@ -12,12 +12,13 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { CommunityScreen } from './src/screens/CommunityScreen';
 import { GateScreen } from './src/components/GateScreen';
 import { JournalScreen } from './src/screens/JournalScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 
-type TabKey = 'today' | 'journal' | 'settings';
+type TabKey = 'today' | 'journal' | 'community' | 'settings';
 
 function MainApp(): React.JSX.Element {
   const insets = useSafeAreaInsets();
@@ -66,6 +67,7 @@ function MainApp(): React.JSX.Element {
             onJournalChanged={handleJournalUpdated}
           />
         )}
+        {activeTab === 'community' && <CommunityScreen />}
         {activeTab === 'settings' && <SettingsScreen />}
       </View>
 
@@ -104,6 +106,22 @@ function MainApp(): React.JSX.Element {
                 activeTab === 'journal' && styles.activeNavTabText,
               ]}>
               📖 기록
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[
+              styles.navTab,
+              activeTab === 'community' && styles.activeNavTab,
+            ]}
+            onPress={() => setActiveTab('community')}>
+            <Text
+              style={[
+                styles.navTabText,
+                activeTab === 'community' && styles.activeNavTabText,
+              ]}>
+              🤝 광장
             </Text>
           </TouchableOpacity>
 

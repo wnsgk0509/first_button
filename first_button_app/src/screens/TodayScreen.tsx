@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -124,6 +125,17 @@ export const TodayScreen: React.FC<Props> = ({ onJournalUpdated }) => {
     }, 2500);
   };
 
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        title: '잠깐 - 오늘의 질문',
+        message: `🌿 잠깐, 오늘의 질문\n\n"${question}"\n\n하루 한 번, 스마트폰을 내려놓고 나를 마주하는 쉼표 🌿\nhttps://wnsgk0509.github.io/first_button/`,
+      });
+    } catch (error) {
+      console.warn('Share error', error);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -146,7 +158,15 @@ export const TodayScreen: React.FC<Props> = ({ onJournalUpdated }) => {
 
         {/* Question Card */}
         <View style={styles.questionCard}>
-          <Text style={styles.questionBadge}>오늘의 질문</Text>
+          <View style={styles.questionHeader}>
+            <Text style={styles.questionBadge}>오늘의 질문</Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.shareBtn}
+              onPress={handleShare}>
+              <Text style={styles.shareBtnText}>📤 질문 공유</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.questionText}>"{question}"</Text>
         </View>
 
@@ -249,12 +269,30 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 10,
   },
+  questionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  shareBtn: {
+    backgroundColor: '#F3EFE7',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E6E0D4',
+  },
+  shareBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#5C705A',
+  },
   questionBadge: {
     fontSize: 12,
     fontWeight: '700',
     color: '#7A8F76',
     letterSpacing: 0.5,
-    marginBottom: 10,
   },
   questionText: {
     fontSize: 19,
