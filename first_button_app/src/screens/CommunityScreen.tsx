@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,80 +12,64 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDailyQuestion, getTodayKey } from '../constants/questions';
 import { loadJournalData } from '../services/storage';
+import {
+  fetchLiveCommunityPosts,
+  PostWithMeta,
+  publishLivePost,
+  updateLivePostLikes,
+} from '../services/supabaseService';
 
-interface CommunityPost {
-  id: string;
-  author: string;
-  timeAgo: string;
-  text: string;
-  likes: number;
-  isUserLiked?: boolean;
-}
-
-const DEFAULT_POSTS: CommunityPost[] = [
-  {
-    id: 'post-1',
-    author: '아침의 바람',
-    timeAgo: '20분 전',
-    text: '알람 끄고 인스타부터 켜려다 멈췄어요. 오늘은 날씨가 맑아서 창문 먼저 열었습니다.',
-    likes: 12,
-  },
-  {
-    id: 'post-2',
-    author: '고요한 산책자',
-    timeAgo: '1시간 전',
-    text: '요즘 왜 이렇게 마음이 조급했는지 질문을 보고 깨달았네요. 일단 따뜻한 차 한 잔 마시려구요.',
-    likes: 8,
-  },
-  {
-    id: 'post-3',
-    author: '새벽의 쉼표',
-    timeAgo: '3시간 전',
-    text: '남들의 속도에 맞추느라 나 자신을 돌보지 못했던 것 같아요. 오늘 하루는 내 속도대로 걸어볼 생각입니다.',
-    likes: 19,
-  },
-  {
-    id: 'post-4',
-    author: '작은 나무',
-    timeAgo: '5시간 전',
-    text: '스스로에게 건네는 한마디 질문이 생각보다 큰 위로가 되네요 🌿',
-    likes: 15,
-  },
-];
-
-const COMMUNITY_STORAGE_KEY = 'jamkkan_community_posts';
 const LIKES_STORAGE_KEY = 'jamkkan_community_likes';
 
 export const CommunityScreen: React.FC = () => {
   const [question] = useState(getDailyQuestion());
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [posts, setPosts] = useState<PostWithMeta[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasSharedToday, setHasSharedToday] = useState(false);
 
   useEffect(() => {
-    loadCommunityPosts();
+    loadPosts();
   }, []);
 
-  const loadCommunityPosts = async () => {
+  const loadPosts = async () => {
+    setIsLoading(true);
     try {
-      const stored = await AsyncStorage.getItem(COMMUNITY_STORAGE_KEY);
+      const livePosts = await fetchLiveCommunityPosts();
       const likesRaw = await AsyncStorage.getItem(LIKES_STORAGE_KEY);
       const likedIds: string[] = likesRaw ? JSON.parse(likesRaw) : [];
 
-      let postList: CommunityPost[] = stored ? JSON.parse(stored) : DEFAULT_POSTS;
-
-      postList = postList.map(p => ({
+      const mapped = livePosts.map(p => ({
         ...p,
         isUserLiked: likedIds.includes(p.id),
       }));
 
-      setPosts(postList);
+      setPosts(mapped);
 
       // Check if user shared today
       const today = getTodayKey();
       const sharedCheck = await AsyncStorage.getItem(`shared_community_${today}`);
       setHasSharedToday(!!sharedCheck);
-    } catch {
-      setPosts(DEFAULT_POSTS);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const livePosts = await fetchLiveCommunityPosts();
+      const likesRaw = await AsyncStorage.getItem(LIKES_STORAGE_KEY);
+      const likedIds: string[] = likesRaw ? JSON.parse(likesRaw) : [];
+
+      setPosts(
+        livePosts.map(p => ({
+          ...p,
+          isUserLiked: likedIds.includes(p.id),
+        }))
+      );
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -92,7 +78,14 @@ export const CommunityScreen: React.FC = () => {
       const likesRaw = await AsyncStorage.getItem(LIKES_STORAGE_KEY);
       let likedIds: string[] = likesRaw ? JSON.parse(likesRaw) : [];
 
+      const targetPost = posts.find(p => p.id === postId);
+      if (!targetPost) return;
+
       const isLiked = likedIds.includes(postId);
+      const nextLikes = isLiked
+        ? Math.max(0, targetPost.likes - 1)
+        : targetPost.likes + 1;
+
       if (isLiked) {
         likedIds = likedIds.filter(id => id !== postId);
       } else {
@@ -101,18 +94,22 @@ export const CommunityScreen: React.FC = () => {
 
       await AsyncStorage.setItem(LIKES_STORAGE_KEY, JSON.stringify(likedIds));
 
+      // Optimistic UI update
       setPosts(prev =>
         prev.map(p => {
           if (p.id === postId) {
             return {
               ...p,
-              likes: isLiked ? p.likes - 1 : p.likes + 1,
+              likes: nextLikes,
               isUserLiked: !isLiked,
             };
           }
           return p;
         })
       );
+
+      // Sync to Supabase
+      await updateLivePostLikes(postId, nextLikes);
     } catch (e) {
       console.warn('Like toggle failed', e);
     }
@@ -132,36 +129,38 @@ export const CommunityScreen: React.FC = () => {
     }
 
     if (hasSharedToday) {
-      Alert.alert('알림', '오늘의 생각은 이미 광장에 익명으로 공유되었습니다 ✦');
+      Alert.alert(
+        '알림',
+        '오늘의 생각은 이미 광장에 익명으로 공유되었습니다 ✦'
+      );
       return;
     }
 
-    const newPost: CommunityPost = {
-      id: `my-${Date.now()}`,
-      author: '익명의 나그네',
-      timeAgo: '방금 전',
-      text: todayEntry.text.trim(),
-      likes: 1,
-      isUserLiked: false,
-    };
-
-    const updated = [newPost, ...posts];
-    setPosts(updated);
-    setHasSharedToday(true);
-
-    await AsyncStorage.setItem(
-      COMMUNITY_STORAGE_KEY,
-      JSON.stringify(updated.slice(0, 20))
+    // Publish to Supabase
+    const published = await publishLivePost(
+      todayEntry.text.trim(),
+      question,
+      '익명의 나그네'
     );
-    await AsyncStorage.setItem(`shared_community_${today}`, '1');
 
-    Alert.alert(
-      '익명 공유 완료',
-      '오늘의 솔직한 생각이 광장에 익명으로 공유되었습니다. 다른 사람들에게 따뜻한 울림이 될 거예요 🌿'
-    );
+    if (published) {
+      setPosts(prev => [published, ...prev]);
+      setHasSharedToday(true);
+      await AsyncStorage.setItem(`shared_community_${today}`, '1');
+
+      Alert.alert(
+        '익명 공유 완료',
+        '오늘의 솔직한 생각이 광장에 등록되었습니다. 다른 사람들에게 따뜻한 울림이 될 거예요 🌿'
+      );
+    } else {
+      Alert.alert(
+        '공유 실패',
+        '인터넷 연결 상태를 확인하고 다시 시도해 주세요.'
+      );
+    }
   };
 
-  const renderItem = ({ item }: { item: CommunityPost }) => {
+  const renderItem = ({ item }: { item: PostWithMeta }) => {
     return (
       <View style={styles.postCard}>
         <View style={styles.postHeader}>
@@ -177,10 +176,7 @@ export const CommunityScreen: React.FC = () => {
         <View style={styles.postFooter}>
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[
-              styles.likeBtn,
-              item.isUserLiked && styles.likeBtnActive,
-            ]}
+            style={[styles.likeBtn, item.isUserLiked && styles.likeBtnActive]}
             onPress={() => handleToggleLike(item.id)}>
             <Text
               style={[
@@ -199,7 +195,9 @@ export const CommunityScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Top Question Info */}
       <View style={styles.questionBanner}>
-        <Text style={styles.bannerTag}>오늘 같은 질문을 마주한 사람들의 생각</Text>
+        <Text style={styles.bannerTag}>
+          오늘 같은 질문을 마주한 사람들의 생각
+        </Text>
         <Text style={styles.bannerQuestion}>"{question}"</Text>
       </View>
 
@@ -221,13 +219,36 @@ export const CommunityScreen: React.FC = () => {
       </View>
 
       {/* Community Feed List */}
-      <FlatList
-        data={posts}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#7A8F76" />
+          <Text style={styles.loadingText}>광장의 생각들을 불러오는 중...</Text>
+        </View>
+      ) : posts.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyEmoji}>🌿</Text>
+          <Text style={styles.emptyTitle}>아직 광장에 도착한 생각이 없어요</Text>
+          <Text style={styles.emptyDesc}>
+            오늘 첫 번째로 내 생각을 익명으로 남겨보세요.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#7A8F76"
+              colors={['#7A8F76']}
+            />
+          }
+        />
+      )}
     </View>
   );
 };
@@ -278,6 +299,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#4F5E4E',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 13,
+    color: '#8C867B',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyEmoji: {
+    fontSize: 44,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#49453F',
+    marginBottom: 6,
+  },
+  emptyDesc: {
+    fontSize: 13,
+    color: '#8C867B',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   listContent: {
     paddingHorizontal: 20,
