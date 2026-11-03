@@ -13,7 +13,7 @@
 **"지루함을 견디지 못해 무의식적으로 핸드폰을 켜는 당신에게 건네는 3초의 쉼표"**  
 하루의 시작을 도파민 스크롤 대신, 스스로를 마주하는 한 번의 질문으로 채우는 디지털 디톡스 & 성찰 크로스 플랫폼 서비스입니다.
 
-[🌐 웹서비스(PWA) 바로가기](https://wnsgk0509.github.io/first_button/) · [📱 안드로이드 APK 다운로드](./잠깐_v1.0.apk)
+[🌐 웹서비스(PWA) 바로가기](https://wnsgk0509.github.io/first_button/) · [📱 안드로이드 APK 다운로드](./잠깐_v1.0.apk) · [📜 개인정보처리방침](https://wnsgk0509.github.io/first_button/privacy.html)
 
 </div>
 
@@ -56,12 +56,18 @@
 * 지난 7일간의 기록 달성률을 %와 요일별(월~일) 도트로 시각화
 * 작성한 일기 텍스트에서 불용어(조사, 일반 부사 등)를 필터링하고 빈도수를 분석하여 **나의 핵심 키워드 TOP 5** 자동 추출
 
-### 5. 🤝 실시간 익명 광장 (Supabase BaaS)
+### 5. 🤝 실시간 익명 광장 & UGC 건전성 보호 (Supabase BaaS)
 * 오늘 같은 질문을 마주한 전 세계 다른 사용자들의 깊고 솔직한 생각을 실시간으로 공유
-* 내 생각도 닉네임('익명의 나그네')으로 안전하게 광장에 발행
+* **비속어 자동 필터링**: 욕설 및 비방 단어를 감지하고 정중한 안내 및 마스킹 처리
+* **신고 및 숨김(Report/Block)**: 불쾌감을 주는 게시글을 즉시 내 피드에서 가리고 관리자 검토를 요청하는 스토어 표준 UGC 정책 준수
+* 오늘 질문 피드 / 전체 피드 필터 탭 제공
 * 댓글이나 비방 없이 오직 서로의 마음에 조용히 새싹을 띄우는 **`🌿 공감해요`** 인터랙션 (로컬 상태 영속화)
 
-### 6. 📤 감성 질문 공유 카드 (`Share` API)
+### 6. 💾 데이터 백업 및 복원 (오프라인-퍼스트 프라이버시)
+* 기기를 변경하거나 앱을 재설치해도 성찰 기록을 잃지 않도록 전체 데이터를 JSON 규격으로 내보내기/가져오기(복원) 지원
+* 클라우드 계정 의존 없이 사용자 로컬 스토리지 중심의 데이터 주권 보장
+
+### 7. 📤 감성 질문 공유 카드 (`Share` API)
 * '오늘의 질문'을 깔끔한 감성 텍스트 템플릿으로 카카오톡, 인스타그램 스토리 등에 원클릭 공유
 
 ---
@@ -73,7 +79,7 @@
   ├── 웹 환경: HTML5, CSS3, Vanilla JS, Service Worker (PWA 캐싱)
   └── 모바일 앱: React Native 0.88, TypeScript
         ├── 4개 화면 탭: 오늘(Today) / 기록(Journal) / 광장(Community) / 설정(Settings)
-        └── 로컬 영속화: AsyncStorage (일기, 스트릭, 설정값 캐싱)
+        └── 로컬 영속화: AsyncStorage (일기, 스트릭, 차단 목록, 설정값 캐싱)
 
 [네이티브 브릿지 계층 (Kotlin)]
   ├── JamkkanBridgeModule: React Native ↔ Android Native 양방향 통신
@@ -97,7 +103,7 @@
 | **Frontend** | React Native 0.88, React 19, TypeScript | 크로스 플랫폼 네이티브 모바일 애플리케이션 개발 |
 | **Mobile Native** | Android SDK, Kotlin, Gradle 9 | 홈화면 위젯, AlarmManager, 몰입 모드 제어 |
 | **Backend / DB** | Supabase (PostgreSQL BaaS), REST API | 실시간 커뮤니티 데이터 영속화 및 RLS 접근 제어 |
-| **Local Storage** | `@react-native-async-storage/async-storage` | 개인 성찰 일기, 스트릭, 로컬 설정 오프라인 보관 |
+| **Local Storage** | `@react-native-async-storage/async-storage` | 개인 성찰 일기, 스트릭, 차단 목록 로컬 오프라인 보관 |
 | **Web / PWA** | Vanilla JS, Service Worker, Web App Manifest | 무설치 웹 접속 지원 및 GitHub Pages 배포 |
 | **CI / Deploy** | GitHub Actions, Git, Gradle Release Signing | 정적 웹 호스팅 및 standalone 릴리즈 APK 빌드 |
 
@@ -133,6 +139,7 @@ first_button/
 ├── app.js                       # 웹 질문 뱅크 및 로컬 스토리지 로직
 ├── sw.js                        # 오프라인 캐싱 서비스 워커
 ├── manifest.json                # PWA 설치 매니페스트
+├── privacy.html                 # 서비스 개인정보처리방침 및 UGC 정책 페이지
 ├── 잠깐_v1.0.apk                 # 최신 빌드 완료된 안드로이드 릴리즈 APK
 │
 └── first_button_app/            # React Native 네이티브 앱 프로젝트
@@ -146,9 +153,10 @@ first_button/
     │   ├── screens/
     │   │   ├── TodayScreen.tsx  # 오늘의 질문, 일기 작성, 공유 기능
     │   │   ├── JournalScreen.tsx# 기록 목록 & 주간 리포트
-    │   │   ├── CommunityScreen.tsx # Supabase 실시간 익명 광장 피드
-    │   │   └── SettingsScreen.tsx  # 알림 시간 설정 & 위젯 동기화
+    │   │   ├── CommunityScreen.tsx # Supabase 실시간 광장 피드, 신고/차단, 비속어 필터
+    │   │   └── SettingsScreen.tsx  # 알림 설정, 위젯 동기화, 데이터 백업/복원, 정책 링크
     │   └── services/
+    │       ├── cleanFilter.ts   # 비속어 필터링 및 마스킹 유틸리티
     │       ├── nativeBridge.ts  # Kotlin NativeModule 브릿지 인터페이스
     │       ├── reportAnalysis.ts# 주간 키워드 마이닝 & 달성률 분석
     │       ├── storage.ts       # AsyncStorage 영속화 서비스

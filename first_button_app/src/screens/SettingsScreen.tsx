@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Linking,
+  Modal,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,7 +20,12 @@ import {
   scheduleDailyAlarm,
   syncWidgetData,
 } from '../services/nativeBridge';
-import { calcStreak, loadJournalData } from '../services/storage';
+import {
+  calcStreak,
+  JournalData,
+  loadJournalData,
+  saveJournalData,
+} from '../services/storage';
 
 export const SettingsScreen: React.FC = () => {
   const [alarmEnabled, setAlarmEnabled] = useState(false);
@@ -27,6 +36,10 @@ export const SettingsScreen: React.FC = () => {
   const [streak, setStreak] = useState(0);
   const [totalWords, setTotalWords] = useState(0);
   const [widgetSyncStatus, setWidgetSyncStatus] = useState<string | null>(null);
+
+  // Restore Modal State
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [restoreInputText, setRestoreInputText] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -104,6 +117,67 @@ export const SettingsScreen: React.FC = () => {
     await syncWidgetData(q, dateLabel);
     setWidgetSyncStatus('위젯에 최신 질문이 반영되었습니다 ✦');
     setTimeout(() => setWidgetSyncStatus(null), 2500);
+  };
+
+  // 1. Data Backup (Export JSON)
+  const handleExportData = async () => {
+    try {
+      const data = await loadJournalData();
+      if (data.entries.length === 0) {
+        Alert.alert('알림', '아직 백업할 성찰 기록이 없습니다 🌿');
+        return;
+      }
+
+      const backupString = JSON.stringify(data, null, 2);
+      await Share.share({
+        title: '잠깐_성찰기록_백업',
+        message: backupString,
+      });
+    } catch (e) {
+      console.warn('Backup error:', e);
+    }
+  };
+
+  // 2. Data Restore (Import JSON)
+  const handleConfirmRestore = async () => {
+    if (!restoreInputText.trim()) {
+      Alert.alert('알림', '백업 텍스트를 입력해 주세요.');
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(restoreInputText.trim());
+      if (!parsed.entries || !Array.isArray(parsed.entries)) {
+        throw new Error('올바른 백업 데이터 형식이 아닙니다.');
+      }
+
+      const existingData = await loadJournalData();
+      // Merge by date (incoming overwrites existing)
+      const existingMap = new Map(existingData.entries.map(e => [e.date, e]));
+      parsed.entries.forEach((e: any) => existingMap.set(e.date, e));
+
+      const mergedEntries = Array.from(existingMap.values()).sort((a, b) =>
+        b.date.localeCompare(a.date)
+      );
+
+      const updatedData: JournalData = { entries: mergedEntries };
+      await saveJournalData(updatedData);
+
+      await loadStats();
+      setShowRestoreModal(false);
+      setRestoreInputText('');
+      Alert.alert(
+        '복원 완료',
+        `총 ${mergedEntries.length}개의 성찰 기록이 안전하게 복원되었습니다 🌿`
+      );
+    } catch (err: any) {
+      Alert.alert('복원 실패', '백업 데이터 형식이 올바르지 않습니다. 복사한 JSON 텍스트 전체를 붙여넣어 주세요.');
+    }
+  };
+
+  // 3. Open Privacy Policy
+  const handleOpenPrivacy = () => {
+    Linking.openURL('https://wnsgk0509.github.io/first_button/privacy.html');
   };
 
   const formatTime = (h: number, m: number) => {
@@ -201,7 +275,31 @@ export const SettingsScreen: React.FC = () => {
         )}
       </View>
 
-      {/* 3. Stats Card */}
+      {/* 3. Data Backup & Restore Card */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>💾 데이터 백업 및 복원</Text>
+        <Text style={styles.cardSub}>
+          소중한 생각 기록을 기기 변경 시에도 안전하게 보관하세요.
+        </Text>
+
+        <View style={styles.backupButtonRow}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.backupBtn}
+            onPress={handleExportData}>
+            <Text style={styles.backupBtnText}>📤 기록 백업하기</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[styles.backupBtn, styles.restoreBtn]}
+            onPress={() => setShowRestoreModal(true)}>
+            <Text style={styles.restoreBtnText}>📥 기록 복원하기</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 4. Stats Card */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>📊 나의 성찰 통계</Text>
         <View style={styles.statsRow}>
@@ -222,14 +320,65 @@ export const SettingsScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* 4. Philosophy Card */}
+      {/* 5. Philosophy & Legal Card */}
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>🌿 서비스 이야기</Text>
         <Text style={styles.infoDesc}>
           지루함을 견디지 못해 우리는 무의식적으로 폰을 켜곤 합니다. 의지 문제가 아니라 손가락의 버릇일 뿐입니다.{'\n\n'}
           '잠깐'은 그 순간에 부드러운 쉼표를 건네며, 무의미한 터치 대신 나 자신과 마주하는 하나의 질문을 남깁니다.
         </Text>
+
+        <View style={styles.legalDivider} />
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.legalLink}
+          onPress={handleOpenPrivacy}>
+          <Text style={styles.legalLinkText}>📜 개인정보처리방침 및 UGC 정책 확인하기 →</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Restore Modal */}
+      <Modal
+        visible={showRestoreModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRestoreModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>기록 복원하기</Text>
+            <Text style={styles.modalSub}>
+              기존에 백업해 두었던 JSON 텍스트 전체를 아래에 붙여넣어 주세요.
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              multiline
+              placeholder='{"entries": [...]}'
+              placeholderTextColor="#ABA59C"
+              value={restoreInputText}
+              onChangeText={setRestoreInputText}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setShowRestoreModal(false);
+                  setRestoreInputText('');
+                }}>
+                <Text style={styles.modalCancelText}>취소</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={handleConfirmRestore}>
+                <Text style={styles.modalConfirmText}>복원 적용</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -352,6 +501,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
+  backupButtonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  backupBtn: {
+    flex: 1,
+    backgroundColor: '#EAE6DC',
+    paddingVertical: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  backupBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4F5E4E',
+  },
+  restoreBtn: {
+    backgroundColor: '#F3EFE7',
+    borderWidth: 1,
+    borderColor: '#E6E0D4',
+  },
+  restoreBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#736E65',
+  },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -393,5 +569,84 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#736E65',
     lineHeight: 20,
+  },
+  legalDivider: {
+    height: 1,
+    backgroundColor: '#E6E0D4',
+    marginVertical: 14,
+  },
+  legalLink: {
+    paddingVertical: 4,
+  },
+  legalLinkText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5C705A',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#ECE7DD',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2E2B27',
+    marginBottom: 6,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: '#8A857C',
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  modalInput: {
+    height: 140,
+    backgroundColor: '#FAF8F4',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#ECE7DD',
+    padding: 12,
+    fontSize: 12,
+    color: '#383531',
+    fontFamily: 'monospace',
+    marginBottom: 16,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+  },
+  modalCancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F3EFE7',
+  },
+  modalCancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#736E65',
+  },
+  modalConfirmBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#5C705A',
+  },
+  modalConfirmText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
