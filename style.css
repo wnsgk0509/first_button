@@ -17,6 +17,7 @@
   --ink:         #2a2320;
   --sage:        #8a9e88;
   --sage-light:  #c4d4c0;
+  --moss:        #4e664b;
   --terracotta:  #c4876a;
   --amber:       #c9a96e;
   --amber-light: #e8d5a8;
@@ -665,16 +666,22 @@ body {
 ───────────────────────────────────────── */
 @media (max-width: 480px) {
   .nav {
-    padding: 12px 16px;
+    padding: 12px 14px;
   }
 
   .nav-logo {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+  }
+
+  .nav-tabs {
+    gap: 2px;
+    padding: 3px;
   }
 
   .nav-tab {
-    font-size: 0.72rem;
-    padding: 7px 12px;
+    font-size: 0.7rem;
+    padding: 6px 9px;
+    white-space: nowrap;
   }
 
   .view {
@@ -976,11 +983,11 @@ body {
 }
 
 .share-btn {
-  background: rgba(243, 239, 231, 0.85);
-  border: 1px solid rgba(212, 200, 176, 0.6);
-  padding: 4px 10px;
+  background: rgba(243, 239, 231, 0.95);
+  border: 1px solid rgba(212, 200, 176, 0.8);
+  padding: 5px 12px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: var(--moss);
   cursor: pointer;
@@ -988,18 +995,19 @@ body {
 }
 
 .share-btn:hover {
-  background: var(--cream);
+  background: var(--warm-white);
+  border-color: var(--moss);
   transform: translateY(-1px);
 }
 
 /* App Download Hint Card */
 .app-download-hint {
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .hint-card {
-  background: rgba(243, 239, 231, 0.7);
-  border: 1px solid rgba(227, 221, 211, 0.8);
+  background: rgba(243, 239, 231, 0.75);
+  border: 1px solid rgba(227, 221, 211, 0.85);
   border-radius: var(--radius-md);
   padding: 16px 20px;
   text-align: center;
@@ -1016,25 +1024,28 @@ body {
 .hint-desc {
   font-size: 0.76rem;
   color: var(--stone);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   line-height: 1.5;
 }
 
 .apk-download-link {
   display: inline-block;
   background: var(--moss);
-  color: #ffffff;
+  color: #ffffff !important;
   text-decoration: none;
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 6px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 18px;
   border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(78, 102, 75, 0.25);
   transition: var(--transition);
 }
 
 .apk-download-link:hover {
   background: var(--charcoal);
+  color: #ffffff !important;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(61, 53, 48, 0.25);
 }
 
 /* Journal Sub-tabs */
@@ -1059,8 +1070,13 @@ body {
   transition: var(--transition);
 }
 
+.sub-tab-btn:hover {
+  background: rgba(235, 229, 217, 0.6);
+  color: var(--charcoal);
+}
+
 .sub-tab-btn.active {
-  background: rgba(235, 229, 217, 0.9);
+  background: rgba(235, 229, 217, 0.95);
   color: var(--ink);
   font-weight: 600;
 }
@@ -1254,7 +1270,7 @@ body {
 .com-share-btn {
   width: 100%;
   background: rgba(234, 230, 220, 0.9);
-  border: 1px solid rgba(212, 200, 176, 0.7);
+  border: 1px solid rgba(212, 200, 176, 0.8);
   padding: 10px;
   border-radius: 14px;
   font-size: 0.82rem;
@@ -1265,7 +1281,8 @@ body {
 }
 
 .com-share-btn:hover {
-  background: var(--cream);
+  background: var(--warm-white);
+  border-color: var(--moss);
 }
 
 .com-filter-row {
@@ -1280,14 +1297,20 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--stone);
-  padding: 4px 10px;
-  border-radius: 10px;
+  padding: 5px 12px;
+  border-radius: 12px;
   cursor: pointer;
+  transition: var(--transition);
+}
+
+.com-filter-btn:hover {
+  background: rgba(235, 229, 217, 0.6);
+  color: var(--charcoal);
 }
 
 .com-filter-btn.active {
-  background: rgba(235, 229, 217, 0.85);
-  color: var(--charcoal);
+  background: rgba(235, 229, 217, 0.95);
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -1424,9 +1447,9 @@ body {
 
 .btn-primary, .btn-secondary {
   flex: 1;
-  padding: 9px 14px;
+  padding: 10px 14px;
   border-radius: 12px;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
@@ -1435,12 +1458,15 @@ body {
 
 .btn-primary {
   background: var(--moss);
-  color: #ffffff;
+  color: #ffffff !important;
   border: none;
+  box-shadow: 0 2px 8px rgba(78, 102, 75, 0.25);
 }
 
 .btn-primary:hover {
   background: var(--charcoal);
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(61, 53, 48, 0.25);
 }
 
 .btn-secondary {
@@ -1450,7 +1476,8 @@ body {
 }
 
 .btn-secondary:hover {
-  background: var(--cream);
+  background: #e7dfd2;
+  color: var(--ink);
 }
 
 .legal-divider {
@@ -1464,10 +1491,12 @@ body {
   font-size: 0.74rem;
   color: var(--moss);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+  transition: var(--transition);
 }
 
 .privacy-link:hover {
+  color: var(--charcoal);
   text-decoration: underline;
 }
 

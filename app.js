@@ -183,6 +183,8 @@ function renderToday() {
   }
 
   const streak = calcStreak(data.entries);
+  const streakEl = document.getElementById('streak-count');
+  if (streakEl) streakEl.textContent = streak;
   const miniEl = document.getElementById('streak-count-mini');
   if (miniEl) miniEl.textContent = streak;
 }
@@ -211,6 +213,8 @@ function saveEntry() {
 
   document.getElementById('save-btn').textContent = '수정하기';
   const streak = calcStreak(data.entries);
+  const streakEl = document.getElementById('streak-count');
+  if (streakEl) streakEl.textContent = streak;
   const miniEl = document.getElementById('streak-count-mini');
   if (miniEl) miniEl.textContent = streak;
 
