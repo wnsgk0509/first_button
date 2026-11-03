@@ -13,7 +13,7 @@
 **"지루함을 견디지 못해 무의식적으로 핸드폰을 켜는 당신에게 건네는 3초의 쉼표"**  
 하루의 시작을 도파민 스크롤 대신, 스스로를 마주하는 한 번의 질문으로 채우는 디지털 디톡스 & 성찰 크로스 플랫폼 서비스입니다.
 
-[🌐 웹서비스(PWA) 바로가기](https://wnsgk0509.github.io/first_button/) · [📱 안드로이드 APK 다운로드](./잠깐_v1.0.apk) · [📜 개인정보처리방침](https://wnsgk0509.github.io/first_button/privacy.html)
+[🌐 웹서비스(PWA) 바로가기](https://wnsgk0509.github.io/first_button/) · [📱 안드로이드 APK 다운로드](https://github.com/wnsgk0509/first_button/releases/download/v1.0.0/jamkkan_v1.0.0.apk) · [📜 개인정보처리방침](https://wnsgk0509.github.io/first_button/privacy.html)
 
 </div>
 
@@ -177,7 +177,7 @@ first_button/
 ## 🚀 설치 및 실행 방법
 
 ### 1. 안드로이드 실기기 직접 설치
-1. 본 레포지토리 루트의 [`잠깐_v1.0.apk`](./잠깐_v1.0.apk) 파일을 스마트폰으로 다운로드합니다.
+1. [📱 최신 릴리즈 APK 다운로드](https://github.com/wnsgk0509/first_button/releases/download/v1.0.0/jamkkan_v1.0.0.apk) 링크를 스마트폰으로 클릭하여 다운로드합니다.
 2. 다운로드된 APK 파일을 터치하여 설치합니다. *(‘출처를 알 수 없는 앱 설치’ 허용)*
 3. 설치 완료 후 홈화면 빈 곳을 길게 눌러 **[위젯] → [잠깐]** 위젯을 추가합니다.
 
