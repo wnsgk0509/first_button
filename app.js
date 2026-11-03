@@ -2,7 +2,6 @@
 
 // ══════════════════════════════════════════
 // GATE SCREEN — 무의식 행동 인터셉트
-// 앱이 열릴 때 3초 pause로 습관 행동을 끊어냄
 // ══════════════════════════════════════════
 const GATE_DURATION = 3000; // ms
 
@@ -16,32 +15,29 @@ const GATE_MESSAGES = [
 
 function initGate() {
   const gate = document.getElementById('gate-screen');
+  if (!gate) return;
   const fillEl = document.getElementById('gate-fill');
   const msgEl = document.getElementById('gate-msg');
 
-  // 랜덤 메시지
   msgEl.textContent = GATE_MESSAGES[Math.floor(Math.random() * GATE_MESSAGES.length)];
 
-  const circumference = 276.5; // 2π × 44
+  const circumference = 276.5;
   const startTime = performance.now();
 
   function tick(now) {
     const elapsed = now - startTime;
     const progress = Math.min(elapsed / GATE_DURATION, 1);
-    // 원이 채워지면서 올라감 (dashoffset 감소)
     fillEl.style.strokeDashoffset = circumference * (1 - progress);
 
     if (progress < 1) {
       requestAnimationFrame(tick);
     } else {
-      // 게이트 닫기
       gate.classList.add('hidden');
     }
   }
 
   requestAnimationFrame(tick);
 
-  // 탭해도 넘어갈 수 있음 (하지만 최소 1초는 보여줌)
   gate.addEventListener('click', () => {
     const elapsed = performance.now() - startTime;
     if (elapsed > 1000) gate.classList.add('hidden');
@@ -88,6 +84,8 @@ const QUESTIONS = [
 // STORAGE
 // ══════════════════════════════════════════
 const STORAGE_KEY = 'jamkkan_journal';
+const LIKES_KEY = 'jamkkan_community_likes';
+const BLOCKED_KEY = 'jamkkan_blocked_posts';
 
 function loadData() {
   try {
@@ -126,9 +124,6 @@ function formatEntryDate(key) {
   return `${y}년 ${m}월 ${d}일 ${days[dt.getDay()]}요일`;
 }
 
-// ══════════════════════════════════════════
-// QUESTION SELECTION (date-seeded)
-// ══════════════════════════════════════════
 function getDailyQuestion() {
   const today = getTodayKey();
   const seed = today.replace(/-/g, '');
@@ -145,15 +140,14 @@ function calcStreak(entries) {
   const today = getTodayKey();
 
   let streak = 0;
-  let cursor = new Date(today);
+  let cursor = new Date();
 
   for (let i = 0; i < dates.length; i++) {
-    const dateKey = cursor.toISOString().slice(0, 10);
+    const dateKey = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
     if (dates.includes(dateKey)) {
       streak++;
       cursor.setDate(cursor.getDate() - 1);
     } else {
-      // Allow today to not break streak if not yet answered
       if (dateKey === today && i === 0) {
         cursor.setDate(cursor.getDate() - 1);
       } else {
@@ -172,19 +166,11 @@ function renderToday() {
   const today = getTodayKey();
   const data = loadData();
 
-  // Date
   document.getElementById('date-label').textContent = getKoreanDate();
 
-  // Question
   const qtEl = document.getElementById('question-text');
-  qtEl.style.opacity = '0';
   qtEl.textContent = question;
-  setTimeout(() => {
-    qtEl.style.transition = 'opacity 0.8s ease';
-    qtEl.style.opacity = '1';
-  }, 100);
 
-  // Pre-fill if already written today
   const todayEntry = data.entries.find(e => e.date === today);
   const textarea = document.getElementById('journal-input');
   if (todayEntry) {
@@ -196,14 +182,11 @@ function renderToday() {
     document.getElementById('save-btn').textContent = '저장하기';
   }
 
-  // Streak
   const streak = calcStreak(data.entries);
-  document.getElementById('streak-count').textContent = streak;
+  const miniEl = document.getElementById('streak-count-mini');
+  if (miniEl) miniEl.textContent = streak;
 }
 
-// ══════════════════════════════════════════
-// CHAR COUNT
-// ══════════════════════════════════════════
 function updateCharCount() {
   const len = document.getElementById('journal-input').value.length;
   document.getElementById('char-count').textContent = `${len}자`;
@@ -211,9 +194,6 @@ function updateCharCount() {
 
 document.getElementById('journal-input').addEventListener('input', updateCharCount);
 
-// ══════════════════════════════════════════
-// SAVE ENTRY
-// ══════════════════════════════════════════
 function saveEntry() {
   const text = document.getElementById('journal-input').value.trim();
   if (!text) {
@@ -225,16 +205,16 @@ function saveEntry() {
   const question = getDailyQuestion();
   const data = loadData();
 
-  // Remove today's existing entry (upsert)
   data.entries = data.entries.filter(e => e.date !== today);
   data.entries.push({ date: today, question, text, savedAt: Date.now() });
   saveData(data);
 
   document.getElementById('save-btn').textContent = '수정하기';
   const streak = calcStreak(data.entries);
-  document.getElementById('streak-count').textContent = streak;
+  const miniEl = document.getElementById('streak-count-mini');
+  if (miniEl) miniEl.textContent = streak;
 
-  showSaveMsg('✦ 저장되었어요', '#8a9e88');
+  showSaveMsg('✦ 저장되었어요 🌿', '#8a9e88');
 }
 
 function showSaveMsg(msg, color) {
@@ -242,17 +222,59 @@ function showSaveMsg(msg, color) {
   el.textContent = msg;
   el.style.color = color;
   el.classList.remove('show');
-  void el.offsetWidth; // reflow
+  void el.offsetWidth;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 2100);
 }
 
 // ══════════════════════════════════════════
-// RENDER JOURNAL VIEW
+// SHARE QUESTION
 // ══════════════════════════════════════════
-function renderJournal() {
+async function shareQuestion() {
+  const question = getDailyQuestion();
+  const shareText = `🌿 잠깐, 오늘의 질문\n\n"${question}"\n\n하루 한 번, 스마트폰을 내려놓고 나를 마주하는 쉼표 🌿\nhttps://wnsgk0509.github.io/first_button/`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: '잠깐 - 오늘의 질문',
+        text: shareText,
+      });
+      return;
+    } catch (e) {
+      // User cancelled or share failed, fallback to clipboard
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(shareText);
+    alert('오늘의 질문이 클립보드에 복사되었습니다! 🌿\n원하는 곳에 붙여넣어 공유해 보세요.');
+  } catch (err) {
+    prompt('아래 텍스트를 복사하여 공유하세요:', shareText);
+  }
+}
+
+// ══════════════════════════════════════════
+// JOURNAL VIEW (목록 + 주간 리포트)
+// ══════════════════════════════════════════
+let currentJournalSubTab = 'list';
+
+function switchJournalSubTab(name) {
+  currentJournalSubTab = name;
+  document.getElementById('subtab-list').classList.toggle('active', name === 'list');
+  document.getElementById('subtab-report').classList.toggle('active', name === 'report');
+
+  document.getElementById('subview-list').classList.toggle('active', name === 'list');
+  document.getElementById('subview-report').classList.toggle('active', name === 'report');
+
+  if (name === 'list') renderJournalList();
+  if (name === 'report') renderWeeklyReport();
+}
+
+function renderJournalList() {
   const data = loadData();
   const list = document.getElementById('entries-list');
+  document.getElementById('journal-count').textContent = data.entries.length;
   list.innerHTML = '';
 
   if (data.entries.length === 0) {
@@ -260,7 +282,6 @@ function renderJournal() {
     return;
   }
 
-  // Sort newest first
   const sorted = [...data.entries].sort((a, b) => b.date.localeCompare(a.date));
 
   sorted.forEach(entry => {
@@ -269,10 +290,10 @@ function renderJournal() {
     card.className = 'entry-card';
     card.innerHTML = `
       <div class="entry-date">${formatEntryDate(entry.date)}</div>
-      <div class="entry-question">"${entry.question}"</div>
+      <div class="entry-question">"${escHtml(entry.question)}"</div>
       <div class="entry-text">${escHtml(entry.text)}</div>
       <div class="entry-footer">
-        <span class="entry-word-count">${words}단어</span>
+        <span class="entry-word-count">${words}단어 · ${entry.text.length}자</span>
         <button class="entry-delete" onclick="deleteEntry('${entry.date}')">삭제</button>
       </div>
     `;
@@ -280,21 +301,443 @@ function renderJournal() {
   });
 }
 
-function escHtml(str) {
-  return str
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/\n/g,'<br/>');
-}
-
 function deleteEntry(date) {
   if (!confirm('이 기록을 삭제할까요?')) return;
   const data = loadData();
   data.entries = data.entries.filter(e => e.date !== date);
   saveData(data);
-  renderJournal();
-  updateAboutStats();
+  renderJournalList();
+  renderWeeklyReport();
+}
+
+// ══════════════════════════════════════════
+// WEEKLY REPORT (텍스트 마이닝)
+// ══════════════════════════════════════════
+const STOP_WORDS = new Set([
+  '그리고','하지만','그런데','너무','그냥','진짜','정말','조금','아주','있는','없는',
+  '것이','내가','나는','나를','오늘','하루','순간','생각','있다','없다','하고','해서','하면','위해','대해'
+]);
+
+function generateWeeklyReportData(entries) {
+  const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+  const today = new Date();
+  const todayKey = getTodayKey();
+
+  const weekDays = [];
+  const entriesMap = new Map();
+  entries.forEach(e => entriesMap.set(e.date, e));
+
+  let weeklyWords = 0;
+  let weeklyChars = 0;
+  const wordFrequency = {};
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    const dateKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dayLabel = dayLabels[d.getDay()];
+    const entry = entriesMap.get(dateKey);
+
+    if (entry) {
+      const words = entry.text.trim().split(/\s+/).filter(Boolean);
+      weeklyWords += words.length;
+      weeklyChars += entry.text.length;
+
+      words.forEach(w => {
+        const cleaned = w.replace(/[^가-힣a-zA-Z]/g, '').trim();
+        if (cleaned.length >= 2 && !STOP_WORDS.has(cleaned)) {
+          wordFrequency[cleaned] = (wordFrequency[cleaned] || 0) + 1;
+        }
+      });
+    }
+
+    weekDays.push({
+      dateKey,
+      dayLabel,
+      isToday: dateKey === todayKey,
+      hasWritten: !!entry,
+    });
+  }
+
+  const writtenDaysCount = weekDays.filter(d => d.hasWritten).length;
+  const completionRate = Math.round((writtenDaysCount / 7) * 100);
+
+  const topKeywords = Object.entries(wordFrequency)
+    .map(([word, count]) => ({ word, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  let insight = '작은 시작이 큰 변화를 만듭니다. 오늘부터 하루 1분, 나에게 질문을 건네보세요.';
+  if (writtenDaysCount >= 5) {
+    insight = '이번 주 나 자신에게 깊은 집중을 선물하셨군요. 무의식 스크롤보다 나를 위한 쉼표가 삶에 자리잡고 있습니다 🌿';
+  } else if (writtenDaysCount >= 3) {
+    insight = '바쁜 일상 속에서도 3번 이상 멈추어 생각을 기록했습니다. 아주 훌륭한 쉼표예요 ✦';
+  }
+
+  return { weekDays, writtenDaysCount, completionRate, weeklyWords, weeklyChars, topKeywords, insight };
+}
+
+function renderWeeklyReport() {
+  const container = document.getElementById('report-container');
+  const data = loadData();
+  const rep = generateWeeklyReportData(data.entries);
+
+  container.innerHTML = `
+    <!-- 1. 달성률 카드 -->
+    <div class="report-card">
+      <h3 class="report-title">이번 주 성찰 달성률</h3>
+      <div class="rate-row">
+        <span class="rate-num">${rep.completionRate}%</span>
+        <span class="rate-sub">최근 7일 중 ${rep.writtenDaysCount}일 쉼표 기록</span>
+      </div>
+
+      <div class="report-days-row">
+        ${rep.weekDays.map(d => `
+          <div class="report-day-col">
+            <div class="report-day-dot ${d.hasWritten ? 'written' : ''} ${d.isToday ? 'today' : ''}">
+              ${d.hasWritten ? '✓' : '·'}
+            </div>
+            <span class="report-day-label" style="${d.isToday ? 'font-weight:700; color:var(--ink);' : ''}">${d.dayLabel}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- 2. 키워드 카드 -->
+    <div class="report-card">
+      <h3 class="report-title">이번 주 나의 키워드</h3>
+      <p class="report-sub">작성한 답변에서 가장 자주 등장한 생각의 단어들입니다</p>
+
+      ${rep.topKeywords.length > 0 ? `
+        <div class="keywords-wrap">
+          ${rep.topKeywords.map((k, idx) => `
+            <div class="keyword-badge">
+              <strong>#${idx + 1}</strong>
+              <span>${escHtml(k.word)}</span>
+              <small style="color:var(--stone); font-size:0.7rem;">${k.count}회</small>
+            </div>
+          `).join('')}
+        </div>
+      ` : `
+        <p style="font-size:0.78rem; color:var(--stone); margin-bottom:12px;">이번 주 기록이 쌓이면 자주 쓴 단어가 여기에 분석됩니다 ✦</p>
+      `}
+
+      <div class="report-stats-mini">
+        <div class="stat-mini-item">
+          <span class="stat-mini-num">${rep.weeklyWords}</span>
+          <span class="stat-mini-label">적어낸 단어</span>
+        </div>
+        <div class="stat-mini-item">
+          <span class="stat-mini-num">${rep.weeklyChars}</span>
+          <span class="stat-mini-label">총 글자수</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 쉼표 한마디 -->
+    <div class="insight-card">
+      <div class="insight-title">🌿 이번 주의 쉼표 한마디</div>
+      <p class="insight-desc">${rep.insight}</p>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════
+// SUPABASE REALTIME COMMUNITY (광장)
+// ══════════════════════════════════════════
+const SUPABASE_URL = 'https://swfqgxfvbgqkywdmhpfm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3ZnFneGZ2Ymdxa3l3ZG1ocGZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwMzcxNTQsImV4cCI6MjEwODYxMzE1NH0.AABIILrO0bR2CSh8Ev2niq8P86fwOQ7BhAQSNloMPsc';
+
+const PROFANITY_LIST = [
+  '시발','씨발','존나','졸라','개새끼','새끼','미친','닥쳐','병신','꺼져','쓰레기','지랄','엠창','느금','애미','죽어','자살','fuck','shit','bitch'
+];
+
+function hasProfanityWeb(text) {
+  const norm = text.toLowerCase().replace(/[\s\d_!@#$%^&*()\-+=~`]+/g, '');
+  return PROFANITY_LIST.some(w => norm.includes(w));
+}
+
+function maskProfanityWeb(text) {
+  let masked = text;
+  PROFANITY_LIST.forEach(w => {
+    const reg = new RegExp(w, 'gi');
+    masked = masked.replace(reg, '*'.repeat(w.length));
+  });
+  return masked;
+}
+
+let communityPosts = [];
+let communityFilter = 'today';
+
+async function loadCommunity() {
+  const feed = document.getElementById('community-feed');
+  const qText = document.getElementById('com-question-text');
+  const q = getDailyQuestion();
+  qText.textContent = `"${q}"`;
+
+  feed.innerHTML = '<div class="loading-spinner">광장의 생각들을 불러오는 중... 🌿</div>';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/community_posts?select=*&order=created_at.desc&limit=50`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+
+    if (!res.ok) throw new Error('Fetch failed');
+    const data = await res.json();
+
+    const blockedRaw = localStorage.getItem(BLOCKED_KEY);
+    const blockedIds = blockedRaw ? JSON.parse(blockedRaw) : [];
+
+    communityPosts = data.filter(p => !blockedIds.includes(p.id));
+    renderCommunityFeed();
+  } catch (err) {
+    feed.innerHTML = '<div class="loading-spinner">광장 글을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>';
+  }
+}
+
+function filterCommunity(mode) {
+  communityFilter = mode;
+  document.getElementById('filter-today').classList.toggle('active', mode === 'today');
+  document.getElementById('filter-all').classList.toggle('active', mode === 'all');
+  renderCommunityFeed();
+}
+
+function renderCommunityFeed() {
+  const feed = document.getElementById('community-feed');
+  const q = getDailyQuestion();
+
+  const likesRaw = localStorage.getItem(LIKES_KEY);
+  const likedIds = likesRaw ? JSON.parse(likesRaw) : [];
+
+  const displayed = communityFilter === 'today'
+    ? communityPosts.filter(p => !p.question || p.question === q)
+    : communityPosts;
+
+  if (displayed.length === 0) {
+    feed.innerHTML = `
+      <div class="loading-spinner" style="padding:40px 20px;">
+        🌿 아직 ${communityFilter === 'today' ? '오늘 질문에' : '광장에'} 도착한 생각이 없어요.<br/>
+        첫 번째로 내 생각을 익명으로 나누어 보세요.
+      </div>
+    `;
+    return;
+  }
+
+  feed.innerHTML = displayed.map(post => {
+    const isLiked = likedIds.includes(post.id);
+    const maskedText = maskProfanityWeb(post.text);
+    const timeAgo = formatTimeAgoWeb(post.created_at);
+
+    return `
+      <div class="feed-card" id="post-${post.id}">
+        <div class="feed-header">
+          <span class="feed-author">🌿 ${escHtml(post.author || '익명의 나그네')}</span>
+          <div class="feed-right">
+            <span class="feed-time">${timeAgo}</span>
+            <button class="feed-report-btn" onclick="reportPostWeb('${post.id}')">🚨 신고</button>
+          </div>
+        </div>
+
+        ${communityFilter === 'all' && post.question && post.question !== q ? `
+          <div class="feed-q-ref">Q. "${escHtml(post.question)}"</div>
+        ` : ''}
+
+        <div class="feed-text">${escHtml(maskedText)}</div>
+
+        <div class="feed-footer">
+          <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikeWeb('${post.id}')">
+            ${isLiked ? '🌱 공감됨' : '🌿 공감해요'} ${post.likes || 0}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatTimeAgoWeb(dateStr) {
+  try {
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return '방금 전';
+    if (diff < 3600) return `${Math.floor(diff/60)}분 전`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`;
+    return `${Math.floor(diff/86400)}일 전`;
+  } catch {
+    return '최근';
+  }
+}
+
+async function shareMyAnswerToCommunity() {
+  const data = loadData();
+  const today = getTodayKey();
+  const todayEntry = data.entries.find(e => e.date === today);
+
+  if (!todayEntry || !todayEntry.text.trim()) {
+    alert('오늘의 질문에 답변을 먼저 작성하고 저장해 주세요 🌿');
+    return;
+  }
+
+  const sharedCheck = localStorage.getItem(`shared_community_${today}`);
+  if (sharedCheck) {
+    alert('오늘의 생각은 이미 광장에 익명으로 공유되었습니다 ✦');
+    return;
+  }
+
+  if (hasProfanityWeb(todayEntry.text)) {
+    alert('차분한 성찰 광장을 위해 부적절하거나 공격적인 단어는 등록할 수 없습니다 🌿');
+    return;
+  }
+
+  const q = getDailyQuestion();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/community_posts`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        author: '익명의 나그네',
+        text: todayEntry.text.trim(),
+        question: q,
+        likes: 1
+      })
+    });
+
+    if (!res.ok) throw new Error('Post failed');
+    const inserted = await res.json();
+
+    localStorage.setItem(`shared_community_${today}`, '1');
+    if (inserted && inserted[0]) {
+      communityPosts.unshift(inserted[0]);
+      renderCommunityFeed();
+    }
+    alert('오늘의 솔직한 생각이 광장에 익명으로 공유되었습니다 🌿');
+  } catch (err) {
+    alert('공유에 실패했습니다. 네트워크 연결을 확인해 주세요.');
+  }
+}
+
+async function toggleLikeWeb(postId) {
+  const likesRaw = localStorage.getItem(LIKES_KEY);
+  let likedIds = likesRaw ? JSON.parse(likesRaw) : [];
+
+  const post = communityPosts.find(p => p.id === postId);
+  if (!post) return;
+
+  const isLiked = likedIds.includes(postId);
+  const nextLikes = isLiked ? Math.max(0, (post.likes || 1) - 1) : (post.likes || 0) + 1;
+
+  if (isLiked) {
+    likedIds = likedIds.filter(id => id !== postId);
+  } else {
+    likedIds.push(postId);
+  }
+  localStorage.setItem(LIKES_KEY, JSON.stringify(likedIds));
+
+  post.likes = nextLikes;
+  renderCommunityFeed();
+
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/community_posts?id=eq.${postId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ likes: nextLikes })
+    });
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+function reportPostWeb(postId) {
+  if (!confirm('부적절하거나 불쾌감을 주는 게시글인가요?\n신고 즉시 내 피드에서 숨겨지며 관리자에게 검토 요청됩니다.')) return;
+
+  const blockedRaw = localStorage.getItem(BLOCKED_KEY);
+  let blockedIds = blockedRaw ? JSON.parse(blockedRaw) : [];
+  if (!blockedIds.includes(postId)) {
+    blockedIds.push(postId);
+    localStorage.setItem(BLOCKED_KEY, JSON.stringify(blockedIds));
+  }
+
+  communityPosts = communityPosts.filter(p => p.id !== postId);
+  renderCommunityFeed();
+  alert('해당 게시글이 피드에서 숨김 처리되었습니다 🌿');
+}
+
+// ══════════════════════════════════════════
+// DATA BACKUP & RESTORE (웹)
+// ══════════════════════════════════════════
+function exportDataWeb() {
+  const data = loadData();
+  if (data.entries.length === 0) {
+    alert('아직 백업할 성찰 기록이 없습니다 🌿');
+    return;
+  }
+
+  const jsonStr = JSON.stringify(data, null, 2);
+
+  // 1. JSON 파일 다운로드 트리거
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `잠깐_성찰기록_백업_${getTodayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  // 2. 클립보드 복사 시도
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      alert('백업 파일이 다운로드되었으며, 클립보드에도 복사되었습니다 🌿');
+    }).catch(() => {
+      alert('백업 파일이 다운로드되었습니다 🌿');
+    });
+  }
+}
+
+function openRestoreModal() {
+  document.getElementById('restore-input').value = '';
+  document.getElementById('restore-modal').classList.add('show');
+}
+
+function closeRestoreModal() {
+  document.getElementById('restore-modal').classList.remove('show');
+}
+
+function confirmRestoreWeb() {
+  const input = document.getElementById('restore-input').value.trim();
+  if (!input) {
+    alert('백업 텍스트를 입력해 주세요.');
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(input);
+    if (!parsed.entries || !Array.isArray(parsed.entries)) {
+      throw new Error('Invalid format');
+    }
+
+    const existing = loadData();
+    const map = new Map(existing.entries.map(e => [e.date, e]));
+    parsed.entries.forEach(e => map.set(e.date, e));
+
+    const merged = Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
+    saveData({ entries: merged });
+
+    closeRestoreModal();
+    updateAboutStats();
+    alert(`총 ${merged.length}개의 기록이 안전하게 복원되었습니다 🌿`);
+  } catch (err) {
+    alert('올바른 백업 JSON 텍스트 형식이 아닙니다. 복사한 전체 텍스트를 붙여넣어 주세요.');
+  }
 }
 
 // ══════════════════════════════════════════
@@ -314,22 +757,30 @@ function updateAboutStats() {
 }
 
 // ══════════════════════════════════════════
-// VIEW SWITCHING
+// VIEW SWITCHING (4 Tabs)
 // ══════════════════════════════════════════
 function showView(name) {
-  // Update tabs
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(`tab-${name}`).classList.add('active');
+  const tab = document.getElementById(`tab-${name}`);
+  if (tab) tab.classList.add('active');
 
-  // Update views
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const target = document.getElementById(`view-${name}`);
-  target.classList.add('active');
+  if (target) target.classList.add('active');
 
-  // Render view
   if (name === 'today') renderToday();
-  if (name === 'journal') renderJournal();
+  if (name === 'journal') switchJournalSubTab(currentJournalSubTab);
+  if (name === 'community') loadCommunity();
   if (name === 'about') updateAboutStats();
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/\n/g,'<br/>');
 }
 
 // ══════════════════════════════════════════
@@ -347,7 +798,7 @@ const breathPhases = [
 const breathRing = document.getElementById('breath-ring');
 const breathLabel = document.getElementById('breath-label');
 
-breathRing.addEventListener('click', toggleBreath);
+if (breathRing) breathRing.addEventListener('click', toggleBreath);
 
 function toggleBreath() {
   if (breathInterval) {
@@ -380,11 +831,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
 
-  // 이미 설치했거나 dismissed한 경우 무시
   const dismissed = localStorage.getItem('jamkkan_install_dismissed');
   if (dismissed) return;
 
-  // 게이트 닫힌 후 2초 뒤에 배너 표시
   setTimeout(() => {
     const banner = document.getElementById('install-banner');
     if (banner) banner.classList.add('visible');
@@ -408,7 +857,6 @@ function dismissInstall() {
   localStorage.setItem('jamkkan_install_dismissed', '1');
 }
 
-// PWA 설치 완료 감지
 window.addEventListener('appinstalled', () => {
   dismissInstall();
   console.log('잠깐 앱이 설치되었습니다 🌿');

@@ -18,7 +18,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500&family=Noto+Sans+KR:wght@300;400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -60,13 +60,14 @@
   <div class="bg-orb orb-2"></div>
   <div class="bg-orb orb-3"></div>
 
-  <!-- Navigation -->
+  <!-- Navigation (4 Tabs) -->
   <nav class="nav" id="nav">
     <div class="nav-logo">잠깐</div>
     <div class="nav-tabs">
-      <button class="nav-tab active" id="tab-today" onclick="showView('today')">오늘의 질문</button>
-      <button class="nav-tab" id="tab-journal" onclick="showView('journal')">나의 기록</button>
-      <button class="nav-tab" id="tab-about" onclick="showView('about')">소개</button>
+      <button class="nav-tab active" id="tab-today" onclick="showView('today')">🌿 오늘</button>
+      <button class="nav-tab" id="tab-journal" onclick="showView('journal')">📖 기록</button>
+      <button class="nav-tab" id="tab-community" onclick="showView('community')">🤝 광장</button>
+      <button class="nav-tab" id="tab-about" onclick="showView('about')">⚙️ 설정</button>
     </div>
   </nav>
 
@@ -83,15 +84,22 @@
       <p class="breath-hint">원을 누르면 호흡 가이드가 시작돼요</p>
     </section>
 
-    <!-- Date -->
-    <p class="date-label" id="date-label">오늘의 날짜</p>
+    <!-- Date & Streak Bar -->
+    <div class="today-meta-bar">
+      <p class="date-label" id="date-label">오늘의 날짜</p>
+      <div class="streak-badge-mini" id="streak-badge-mini">
+        <span>🌿 <strong id="streak-count-mini">0</strong>일 연속</span>
+      </div>
+    </div>
 
     <!-- Question Card -->
     <section class="question-section">
       <div class="question-card" id="question-card">
-        <div class="q-mark">"</div>
+        <div class="question-header">
+          <span class="question-badge">오늘의 질문</span>
+          <button class="share-btn" onclick="shareQuestion()">📤 질문 공유</button>
+        </div>
         <p class="question-text" id="question-text">오늘 아침, 가장 먼저 떠오른 생각은 무엇인가요?</p>
-        <div class="q-mark q-mark-close">"</div>
       </div>
     </section>
 
@@ -102,7 +110,7 @@
         <textarea
           id="journal-input"
           class="journal-textarea"
-          placeholder="생각나는 것을 자유롭게 적어보세요. 잘 쓸 필요 없어요."
+          placeholder="답변을 길게 쓰지 않아도 괜찮아요. 지금 스치는 솔직한 생각을 한 줄이라도 남겨보세요."
           rows="5"
         ></textarea>
         <div class="journal-actions">
@@ -113,68 +121,133 @@
       <p class="save-msg" id="save-msg"></p>
     </section>
 
-    <!-- Streak -->
-    <section class="streak-section">
-      <div class="streak-badge" id="streak-badge">
-        <span class="streak-icon">🌿</span>
-        <span class="streak-count" id="streak-count">0</span>
-        <span class="streak-label-text">일 연속</span>
+    <!-- Mobile App Hint -->
+    <section class="app-download-hint">
+      <div class="hint-card">
+        <span class="hint-title">📱 안드로이드 전용 앱 설치</span>
+        <p class="hint-desc">홈화면 위젯과 아침 잠금화면 알림을 원하시면 앱으로 설치해 보세요.</p>
+        <a href="https://github.com/wnsgk0509/first_button/releases/download/v1.0.0/jamkkan_v1.0.0.apk" class="apk-download-link" download>
+          최신 APK 다운로드 🌿
+        </a>
       </div>
     </section>
 
   </main>
 
   <!-- ═══════════════════════════════════════ -->
-  <!-- VIEW: JOURNAL -->
+  <!-- VIEW: JOURNAL (목록 + 주간 리포트) -->
   <!-- ═══════════════════════════════════════ -->
   <main class="view" id="view-journal">
-    <div class="journal-header">
-      <h1 class="journal-title">나의 기록</h1>
-      <p class="journal-subtitle">쌓인 생각들을 돌아보세요</p>
+    <div class="sub-tab-bar">
+      <button class="sub-tab-btn active" id="subtab-list" onclick="switchJournalSubTab('list')">기록 목록 (<span id="journal-count">0</span>)</button>
+      <button class="sub-tab-btn" id="subtab-report" onclick="switchJournalSubTab('report')">📊 주간 리포트</button>
     </div>
-    <div class="entries-list" id="entries-list">
-      <p class="empty-msg">아직 기록이 없어요.<br/>오늘의 질문에 답하고 저장해 보세요. 🌿</p>
+
+    <!-- 1. 기록 목록 서브뷰 -->
+    <div class="journal-subview active" id="subview-list">
+      <div class="entries-list" id="entries-list">
+        <p class="empty-msg">아직 기록이 없어요.<br/>오늘의 질문에 답하고 저장해 보세요. 🌿</p>
+      </div>
+    </div>
+
+    <!-- 2. 주간 리포트 서브뷰 -->
+    <div class="journal-subview" id="subview-report">
+      <div class="report-container" id="report-container">
+        <!-- JS로 동적 렌더링 -->
+      </div>
     </div>
   </main>
 
   <!-- ═══════════════════════════════════════ -->
-  <!-- VIEW: ABOUT -->
+  <!-- VIEW: COMMUNITY (실시간 익명 광장) -->
   <!-- ═══════════════════════════════════════ -->
-  <main class="view" id="view-about">
-    <div class="about-content">
-      <div class="about-icon">☽</div>
-      <h1 class="about-title">잠깐</h1>
-      <p class="about-subtitle">haru han jil-mun</p>
-      <div class="about-divider"></div>
-      <div class="about-body">
-        <p>습관처럼 핸드폰을 집어 들었나요?</p>
-        <p>괜찮아요. 의지력의 문제가 아니에요.</p>
-        <p>우리의 뇌는 지루함을 피하려 자동으로<br/>자극을 찾아 나섭니다.</p>
-        <br/>
-        <p><strong>잠깐</strong>은 그 순간을 붙잡아<br/>자신에게 하나의 질문을 던집니다.</p>
-        <br/>
-        <p>도파민 대신 — 생각.</p>
-        <p>스크롤 대신 — 성찰.</p>
-      </div>
-      <div class="about-divider"></div>
-      <div class="about-stats" id="about-stats">
-        <div class="stat-item">
-          <span class="stat-num" id="stat-total">0</span>
-          <span class="stat-label">총 기록</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-          <span class="stat-num" id="stat-streak">0</span>
-          <span class="stat-label">연속 일수</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-          <span class="stat-num" id="stat-words">0</span>
-          <span class="stat-label">총 단어</span>
-        </div>
+  <main class="view" id="view-community">
+    <div class="community-banner">
+      <span class="com-tag">오늘 같은 질문을 마주한 사람들의 생각</span>
+      <p class="com-question" id="com-question-text">"..."</p>
+    </div>
+
+    <div class="com-action-row">
+      <button class="com-share-btn" id="com-share-my-btn" onclick="shareMyAnswerToCommunity()">
+        ✍️ 내 오늘 답변도 익명으로 나누기
+      </button>
+    </div>
+
+    <div class="com-filter-row">
+      <button class="com-filter-btn active" id="filter-today" onclick="filterCommunity('today')">오늘 질문 피드</button>
+      <button class="com-filter-btn" id="filter-all" onclick="filterCommunity('all')">전체 피드</button>
+    </div>
+
+    <div class="community-feed" id="community-feed">
+      <div class="loading-spinner" id="community-loading">
+        <span>광장의 생각들을 불러오는 중... 🌿</span>
       </div>
     </div>
   </main>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- VIEW: ABOUT / SETTINGS (설정 & 백업) -->
+  <!-- ═══════════════════════════════════════ -->
+  <main class="view" id="view-about">
+    <div class="about-content">
+      <!-- 1. Stats -->
+      <div class="settings-card">
+        <h2 class="card-title">📊 나의 성찰 통계</h2>
+        <div class="about-stats" id="about-stats">
+          <div class="stat-item">
+            <span class="stat-num" id="stat-total">0</span>
+            <span class="stat-label">총 기록</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-num" id="stat-streak">0</span>
+            <span class="stat-label">연속 일수</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-num" id="stat-words">0</span>
+            <span class="stat-label">총 단어</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Data Backup & Restore -->
+      <div class="settings-card">
+        <h2 class="card-title">💾 데이터 백업 및 복원</h2>
+        <p class="card-sub">브라우저 쿠키가 삭제되거나 기기를 바꿔도 기록을 안전하게 보관하세요.</p>
+        <div class="backup-btn-row">
+          <button class="btn-primary" onclick="exportDataWeb()">📤 기록 백업하기</button>
+          <button class="btn-secondary" onclick="openRestoreModal()">📥 기록 복원하기</button>
+        </div>
+      </div>
+
+      <!-- 3. Philosophy & Legal -->
+      <div class="settings-card">
+        <h2 class="card-title">🌿 서비스 이야기</h2>
+        <div class="about-body">
+          <p>지루함을 견디지 못해 우리는 무의식적으로 폰을 켜곤 합니다. 의지 문제가 아니라 손가락의 버릇일 뿐입니다.</p>
+          <p>'잠깐'은 그 순간에 부드러운 쉼표를 건네며, 무의미한 터치 대신 나 자신과 마주하는 하나의 질문을 남깁니다.</p>
+        </div>
+        <div class="legal-divider"></div>
+        <a href="./privacy.html" class="privacy-link" target="_blank">
+          📜 개인정보처리방침 및 UGC 정책 확인하기 →
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Restore Modal -->
+  <div class="modal-overlay" id="restore-modal">
+    <div class="modal-card">
+      <h3 class="modal-title">기록 복원하기</h3>
+      <p class="modal-sub">기존에 백업해 두었던 JSON 텍스트 전체를 아래에 붙여넣어 주세요.</p>
+      <textarea id="restore-input" class="modal-textarea" placeholder='{"entries": [...]}'></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeRestoreModal()">취소</button>
+        <button class="btn-primary" onclick="confirmRestoreWeb()">복원 적용</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
   <script>
